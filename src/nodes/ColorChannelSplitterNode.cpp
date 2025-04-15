@@ -3,16 +3,20 @@
 #include <iostream>
 #include <imgui.h>
 
+// Constructor: Initializes the node with a name and an option to output grayscale image
 ColorChannelSplitterNode::ColorChannelSplitterNode(const std::string& name, bool outputGrayscale)
     : Node(), outputGrayscale(outputGrayscale) {
     this->name = name;
     this->id = "color_splitter_" + name;
 }
 
+// Sets the input image for processing
 void ColorChannelSplitterNode::setInput(const cv::Mat& input) {
     inputImage = input;
 }
 
+// Process the image by splitting it into color channels (Red, Green, Blue, and optionally Alpha)
+// If grayscale output is enabled, the grayscale image will also be generated
 void ColorChannelSplitterNode::process() {
     if (inputImage.empty()) {
         std::cerr << "No input image for ColorChannelSplitterNode: " << name << std::endl;
@@ -21,12 +25,14 @@ void ColorChannelSplitterNode::process() {
 
     cv::Mat grayscale;
     if (outputGrayscale) {
+        // Convert to grayscale if enabled
         cv::cvtColor(inputImage, grayscale, cv::COLOR_BGR2GRAY);
-        cv::imwrite("GrayScale.png", grayscale);
+        cv::imwrite("GrayScale.png", grayscale);  // Save the grayscale image
         std::cout << "Image converted to grayscale." << std::endl;
     }
 
     std::vector<cv::Mat> channels;
+    // Split the input image into its RGB (or RGBA) channels
     if (inputImage.channels() == 3) {
         cv::split(inputImage, channels);
         redChannel = channels[2];
@@ -40,6 +46,7 @@ void ColorChannelSplitterNode::process() {
         alphaChannel = channels[3];
     }
 
+    // Save each channel as separate images
     if (!redChannel.empty()) {
         cv::imwrite("Red_Channel.png", redChannel);
     }
@@ -50,12 +57,14 @@ void ColorChannelSplitterNode::process() {
         cv::imwrite("Blue_Channel.png", blueChannel);
     }
 
+    // Save grayscale versions of each channel, if outputGrayscale is enabled
     if (outputGrayscale) {
         cv::imwrite("Red_Grayscale.png", redChannel);
         cv::imwrite("Green_Grayscale.png", greenChannel);
         cv::imwrite("Blue_Grayscale.png", blueChannel);
     }
 
+    // Display each channel in a window for visualization
     if (!redChannel.empty()) {
         cv::imshow("Red Channel", redChannel);
     }
@@ -69,28 +78,33 @@ void ColorChannelSplitterNode::process() {
         cv::imshow("Alpha Channel", alphaChannel);
     }
 
-    cv::waitKey(0);
+    cv::waitKey(0);  // Wait for a key press to close the display windows
 }
 
+// Merge the individual RGB (or RGBA) channels back into a single image
 cv::Mat ColorChannelSplitterNode::mergeChannels() {
     if (redChannel.empty() || greenChannel.empty() || blueChannel.empty()) {
         std::cerr << "One or more channels are empty, cannot merge." << std::endl;
-        return cv::Mat();
+        return cv::Mat();  // Return an empty matrix if any channel is empty
     }
 
+    // Merge channels in RGB order for a standard color image
     std::vector<cv::Mat> channels = {blueChannel, greenChannel, redChannel};
     cv::Mat mergedImage;
     cv::merge(channels, mergedImage);
     return mergedImage;
 }
 
+// Render the user interface for the ColorChannelSplitterNode to adjust settings and visualize channels
 void ColorChannelSplitterNode::renderUI() {
     std::cout << "[ColorChannelSplitterNode: " << name << "]" << std::endl;
 
+    // Checkbox to toggle grayscale output
     if (ImGui::Checkbox("Output Grayscale", &outputGrayscale)) {
         process();
     }
 
+    // Display the Red, Green, Blue, and Alpha channels if available
     if (!redChannel.empty()) {
         ImGui::Text("Red Channel");
         cv::Mat redChannelDisplay;
@@ -124,19 +138,22 @@ void ColorChannelSplitterNode::renderUI() {
     }
 }
 
+// Get the output image based on the grayscale flag
 cv::Mat ColorChannelSplitterNode::getOutput() const {
     if (outputGrayscale) {
-        return redChannel;
+        return redChannel;  // If grayscale, return the red channel (or any single channel)
     } else {
-        return inputImage;
+        return inputImage;  // Otherwise, return the original input image
     }
 }
 
+// Enable or disable grayscale output, and reprocess the image accordingly
 void ColorChannelSplitterNode::setOutputGrayscale(bool enable) {
     outputGrayscale = enable;
     process();
 }
 
+// Reset parameters, disabling grayscale output and reprocessing the image
 void ColorChannelSplitterNode::resetParams() {
     outputGrayscale = false;
     process();

@@ -1,16 +1,22 @@
 cmake_minimum_required(VERSION 3.10)
-project(OpenCV_Mingw_Example)
+project(ImageProcessingNodeApp)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(OpenCV_DIR "C:/OpenCV_Mingw/install") 
+# -------------------- Options --------------------
+# Set these paths via -D in cmake command or set them as environment variables
+set(OpenCV_DIR $ENV{OpenCV_DIR} CACHE PATH "Path to OpenCV directory")
+set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/libs/imgui CACHE PATH "Path to ImGui directory")
+set(FASTNOISE_DIR ${PROJECT_SOURCE_DIR}/libs CACHE PATH "Path to FastNoise directory")
 
-include_directories("C:/OpenCV_Mingw/include")
+# -------------------- Includes --------------------
+include_directories(
+    ${IMGUI_DIR}
+    ${FASTNOISE_DIR}
+    ${PROJECT_SOURCE_DIR}/src
+)
 
-link_directories("C:/OpenCV_Mingw/install/x64/mingw/lib")  
-
-set(IMGUI_DIR "D:/Coding/Node Assignment/libs/imgui")
-
+# -------------------- ImGui Sources --------------------
 set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui.cpp
     ${IMGUI_DIR}/imgui_draw.cpp
@@ -19,25 +25,17 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/imgui_demo.cpp
 )
 
-include_directories(${IMGUI_DIR})
-
-
-add_executable(main
-    src/main.cpp
-
-    src/graph/NodeGraph.cpp
-
-    src/nodes/ImageInputNode.cpp
-    src/nodes/OutputNode.cpp
-    src/nodes/BrightnessContrastNode.cpp
-    src/nodes/ColorChannelSplitterNode.cpp
-    src/nodes/BlurNode.cpp
-    src/nodes/ThresholdNode.cpp
-    src/nodes/EdgeDetectionNode.cpp
-    ${IMGUI_SOURCES} 
+# -------------------- Main Executable --------------------
+file(GLOB_RECURSE PROJECT_SOURCES
+    src/*.cpp
 )
 
+add_executable(main
+    ${PROJECT_SOURCES}
+    ${IMGUI_SOURCES}
+)
 
+# -------------------- OpenCV --------------------
 find_package(OpenCV REQUIRED)
-
+include_directories(${OpenCV_INCLUDE_DIRS})
 target_link_libraries(main ${OpenCV_LIBS})

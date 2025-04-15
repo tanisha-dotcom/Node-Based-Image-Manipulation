@@ -1,6 +1,7 @@
 #include "OutputNode.hpp"
 #include <iostream>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <imgui.h>
 
 OutputNode::OutputNode(const std::string& name, const std::string& path, const std::string& type, int quality)
@@ -19,53 +20,71 @@ void OutputNode::process() {
         return;
     }
 
+    // Optional preview in separate window
     cv::imshow("Preview - " + name, inputImage);
-    cv::waitKey(0); 
+    cv::waitKey(1);  // non-blocking
 
-    std::vector<int> compression_params;
+    std::vector<int> compressionParams;
     if (type == "jpg" || type == "jpeg") {
-        compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
-        compression_params.push_back(quality);
+        compressionParams.push_back(cv::IMWRITE_JPEG_QUALITY);
+        compressionParams.push_back(quality);
     } else if (type == "png") {
-        compression_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
-        compression_params.push_back(quality); 
+        compressionParams.push_back(cv::IMWRITE_PNG_COMPRESSION);
+        compressionParams.push_back(quality / 10);  // PNG uses 0-9 compression
     }
-    bool success = cv::imwrite(savePath + "." + type, inputImage, compression_params);
+
+    std::string fullPath = savePath + "." + type;
+    bool success = cv::imwrite(fullPath, inputImage, compressionParams);
     if (success) {
-        std::cout << "Output saved to: " << savePath << "." << type << std::endl;
+        std::cout << "[✅] Output saved to: " << fullPath << std::endl;
     } else {
-        std::cerr << "Failed to save output to: " << savePath << "." << type << std::endl;
+        std::cerr << "[❌] Failed to save output to: " << fullPath << std::endl;
     }
 
     cv::destroyAllWindows();
 }
 
 void OutputNode::renderUI() {
-    ImGui::Text("[OutputNode: %s] Saving to: %s", name.c_str(), savePath.c_str());
+    ImGui::Text("🖼️ Output Node: %s", name.c_str());
     
     ImGui::SliderInt("Quality", &quality, 1, 100);
 
-    char newPath[256];
-    strcpy(newPath, savePath.c_str());
-    if (ImGui::InputText("Save Path", newPath, IM_ARRAYSIZE(newPath))) {
-        savePath = std::string(newPath); 
+    static char pathBuffer[256];
+    strcpy(pathBuffer, savePath.c_str());
+    if (ImGui::InputText("Save Path", pathBuffer, IM_ARRAYSIZE(pathBuffer))) {
+        savePath = std::string(pathBuffer);
     }
 
-    if (ImGui::Button("Save Image")) {
-        process();  
+    const char* formats[] = { "jpg", "png" };
+    static int formatIdx = (type == "png") ? 1 : 0;
+    if (ImGui::Combo("Format", &formatIdx, formats, IM_ARRAYSIZE(formats))) {
+        type = formats[formatIdx];
     }
 
+    if (ImGui::Button("💾 Save Image")) {
+        process();
+    }
+
+    // Embedded preview (if needed — optional)
     if (!inputImage.empty()) {
-        cv::Mat displayImage;
-        cv::cvtColor(inputImage, displayImage, cv::COLOR_BGR2RGBA);
-        displayImage = displayImage.clone();  
+        cv::Mat resized;
+        float maxWidth = 200.0f;
+        float scale = maxWidth / inputImage.cols;
+        cv::resize(inputImage, resized, cv::Size(), scale, scale);
 
-        unsigned char* data = displayImage.data;
-        ImTextureID imageTexture = reinterpret_cast<ImTextureID>(data);
-        ImGui::Image(imageTexture, ImVec2(displayImage.cols, displayImage.rows));  
+        cv::Mat rgba;
+        cv::cvtColor(resized, rgba, cv::COLOR_BGR2RGBA);
+
+        // Create OpenGL texture for ImGui if using a rendering backend (not covered here)
+        // For now just a placeholder to show idea
+        ImGui::Text("(Image preview would be shown here)");
     }
 }
 
 cv::Mat OutputNode::getOutput() const {
     return inputImage;
+}
+
+void OutputNode::settype(const std::string &stype) {
+    this->type = std::move(stype);
 }
