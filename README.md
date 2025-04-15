@@ -74,7 +74,7 @@ This image is the result of blending two images using the 'multiply' operation:
 1. Clone the repository to your local machine:
 
     ```bash
-    git clone https://github.com/yourusername/node-based-image-manipulation.git
+    git clone https://github.com/tanisha-dotcom/Node-Based-Image-Manipulation.git
     ```
 
 2. Install OpenCV and ImGui, either via a package manager or by building them from source.
